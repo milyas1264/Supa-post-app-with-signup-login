@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>My Post App (Auth + Likes)</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+
+    <h1>📝 My Post App</h1>
+
+    <!-- AUTH -->
+    <section class="card">
+      <h2>Login / Signup</h2>
+      <div class="auth-grid">
+        <input type="email" id="email" placeholder="Email" />
+        <input type="password" id="password" placeholder="Password" />
+        <button id="signupBtn">Sign Up</button>
+        <button id="loginBtn">Login</button>
+        <button id="logoutBtn" class="secondary">Logout</button>
+      </div>
+      <p id="authStatus" class="muted"></p>
+    </section>
+
+    <!-- CREATE POST (only visible when logged in) -->
+    <section id="compose" class="card hidden">
+      <h2>Create Post</h2>
+      <input type="text" id="title" placeholder="Post title" />
+      <textarea id="content" placeholder="Write something..."></textarea>
+      <button id="addBtn">➕ Add Post</button>
+    </section>
+
+    <!-- FEED -->
+    <section class="card">
+      <div class="feed-header">
+        <h2>📌 All Posts</h2>
+        <label class="switch">
+          <input type="checkbox" id="myPostsToggle" />
+          <span class="slider"></span>
+        </label>
+        <span class="muted">Show only my posts</span>
+      </div>
+      <div id="postList" class="post-list"></div>
+    </section>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js"></script>
+</body>
+</html>
