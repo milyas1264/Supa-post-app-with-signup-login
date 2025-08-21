@@ -1,7 +1,38 @@
 // ========== Supabase Config ==========
 const SUPABASE_URL = "https://uixwmahojaiqgjxopcwo.supabase.co"; // <-- replace
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpeHdtYWhvamFpcWdqeG9wY3dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMjEwMzIsImV4cCI6MjA3MDU5NzAzMn0.8gW9ouL8XFU8ej39qn4WmDFu94HgGMqwnP-dhSZLgSQ";                         // <-- replace
-const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// User Signup
+async function signUp(email, password) {
+  let { data, error } = await supabaseClient.auth.signUp({
+    email,
+    password
+  });
+
+  if (error) {
+    console.error("Signup Error:", error.message);
+    alert("❌ " + error.message);
+  } else {
+    alert("✅ Signup successful! Check your email for confirmation.");
+  }
+}
+
+// User Login
+async function login(email, password) {
+  let { data, error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    console.error("Login Error:", error.message);
+    alert("❌ " + error.message);
+  } else {
+    alert("✅ Login successful!");
+  }
+}
+
 
 // ========== Elements ==========
 const emailEl = document.getElementById("email");
@@ -22,7 +53,7 @@ let currentUser = null;
 
 // ========== Auth Handlers ==========
 signupBtn.onclick = async () => {
-  const { error } = await sb.auth.signUp({
+  const { error } = await supabaseClient.auth.signUp({
     email: emailEl.value.trim(),
     password: passwordEl.value.trim()
   });
@@ -34,7 +65,7 @@ signupBtn.onclick = async () => {
 };
 
 loginBtn.onclick = async () => {
-  const { error } = await sb.auth.signInWithPassword({
+  const { error } = await supabaseClient.auth.signInWithPassword({
     email: emailEl.value.trim(),
     password: passwordEl.value.trim()
   });
@@ -42,10 +73,10 @@ loginBtn.onclick = async () => {
 };
 
 logoutBtn.onclick = async () => {
-  await sb.auth.signOut();
+  await supabaseClient.auth.signOut();
 };
 
-sb.auth.onAuthStateChange(async (_event, session) => {
+supabaseClient.auth.onAuthStateChange(async (_event, session) => {
   currentUser = session?.user ?? null;
   updateAuthUI();
   await loadPosts();
@@ -69,7 +100,7 @@ addBtn.onclick = async () => {
   const content = contentEl.value.trim();
   if (!title || !content) { alert("Please fill all fields"); return; }
 
-  const { error } = await sb.from("posts").insert([
+  const { error } = await supabaseClient.from("posts").insert([
     { title, content, user_id: currentUser.id }
   ]);
 
@@ -82,13 +113,13 @@ addBtn.onclick = async () => {
   }
 };
 
-myPostsToggle.onchange = async () => { await loadPosts(); };
+// myPostsToggle.onchange = async () => { await loadPosts(); };
 
 async function loadPosts() {
-  const onlyMine = myPostsToggle.checked && !!currentUser;
+  // const onlyMine = myPostsToggle.checked && !!currentUser;
 
-  let query = sb.from("posts").select("*").order("id", { ascending: false });
-  if (onlyMine && currentUser) query = query.eq("user_id", currentUser.id);
+  let query = supabaseClient.from("posts").select("*").order("id", { ascending: false });
+  // if (onlyMine && currentUser) query = query.eq("user_id", currentUser.id);
 
   const { data, error } = await query;
   if (error) { console.error(error); return; }
@@ -132,7 +163,7 @@ function renderPost(post) {
 
 // Secure like: policy only allows +1
 async function likePost(id, currentLikes) {
-  const { error } = await sb
+  const { error } = await supabaseClient
     .from("posts")
     .update({ likes: currentLikes + 1 })
     .eq("id", id);
@@ -153,7 +184,7 @@ async function editPost(post) {
   const content = prompt("Edit content:", post.content || "");
   if (content === null) return;
 
-  const { error } = await sb
+  const { error } = await supabaseClient
     .from("posts")
     .update({ title, content })
     .eq("id", post.id);
@@ -164,7 +195,7 @@ async function editPost(post) {
 
 async function deletePost(id) {
   if (!confirm("Delete this post?")) return;
-  const { error } = await sb.from("posts").delete().eq("id", id);
+  const { error } = await supabaseClient.from("posts").delete().eq("id", id);
   if (error) alert("Delete failed: " + error.message);
   else loadPosts();
 }
@@ -181,7 +212,7 @@ function escapeHTML(str) {
 
 // initial load (handles already-logged-in sessions)
 (async () => {
-  const { data: { user } } = await sb.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   currentUser = user ?? null;
   updateAuthUI();
   await loadPosts();
