@@ -1,52 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>My Post App (Auth + Likes)</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>Post App with Supabase</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f6fa;
+      margin: 0; padding: 0;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    input, textarea, button {
+      width: 100%;
+      margin: 5px 0;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    textarea { resize: vertical; }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      border-radius: 6px;
+    }
+    button:hover { background: #0056b3; }
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .card h3 { margin: 0 0 10px 0; }
+    .card img {
+      max-width: 100%;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    .small { font-size: 12px; color: gray; }
+    .btn-group button {
+      width: auto;
+      margin-right: 8px;
+      padding: 6px 12px;
+      font-size: 14px;
+    }
+    .toggle-area {
+      margin: 10px 0;
+      padding: 8px;
+      background: #eef1f7;
+      border-radius: 8px;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
+    <h1>📌 Supabase Post App</h1>
 
-    <h1>📝 My Post App</h1>
+    <!-- Signup -->
+    <h2>Signup</h2>
+    <input type="email" id="signupEmail" placeholder="Email">
+    <input type="password" id="signupPassword" placeholder="Password">
+    <button id="signupBtn">Signup</button>
 
-    <!-- AUTH -->
-    <section class="card">
-      <h2>Login / Signup</h2>
-      <div class="auth-grid">
-        <input type="email" id="email" placeholder="Email" />
-        <input type="password" id="password" placeholder="Password" />
-        <button id="signupBtn">Sign Up</button>
-        <button id="loginBtn">Login</button>
-        <button id="logoutBtn" class="secondary">Logout</button>
-      </div>
-      <p id="authStatus" class="muted"></p>
-    </section>
+    <!-- Login -->
+    <h2>Login</h2>
+    <input type="email" id="loginEmail" placeholder="Email">
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button id="loginBtn">Login</button>
+    <button id="logoutBtn">Logout</button>
 
-    <!-- CREATE POST (only visible when logged in) -->
-    <section id="compose" class="card hidden">
-      <h2>Create Post</h2>
-      <input type="text" id="title" placeholder="Post title" />
-      <textarea id="content" placeholder="Write something..."></textarea>
-      <button id="addBtn">➕ Add Post</button>
-    </section>
+    <!-- Add Post -->
+    <h2>Add Post</h2>
+    <input type="text" id="title" placeholder="Post Title">
+    <textarea id="content" placeholder="Post Content"></textarea>
+    <input type="file" id="imageInput" accept="image/*">
+    <button id="addBtn">Add Post</button>
 
-    <!-- FEED -->
-    <section class="card">
-      <div class="feed-header">
-        <h2>📌 All Posts</h2>
-        <label class="switch">
-          <input type="checkbox" id="myPostsToggle" />
-          <span class="slider"></span>
-        </label>
-        <span class="muted">Show only my posts</span>
-      </div>
-      <div id="postList" class="post-list"></div>
-    </section>
+    <!-- Filter -->
+    <div class="toggle-area">
+      <label>
+        <input type="checkbox" id="myPostsToggle"> Show only my posts
+      </label>
+    </div>
 
+    <!-- Posts -->
+    <h2>All Posts</h2>
+    <div id="posts"></div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase Library -->
+  <script src="https://unpkg.com/@supabase/supabase-js"></script>
   <script src="script.js"></script>
 </body>
 </html>

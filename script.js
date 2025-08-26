@@ -3,217 +3,222 @@ const SUPABASE_URL = "https://uixwmahojaiqgjxopcwo.supabase.co"; // <-- replace
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpeHdtYWhvamFpcWdqeG9wY3dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMjEwMzIsImV4cCI6MjA3MDU5NzAzMn0.8gW9ouL8XFU8ej39qn4WmDFu94HgGMqwnP-dhSZLgSQ";                         // <-- replace
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// User Signup
-async function signUp(email, password) {
-  let { data, error } = await supabaseClient.auth.signUp({
-    email,
-    password
-  });
-
-  if (error) {
-    console.error("Signup Error:", error.message);
-    alert("❌ " + error.message);
-  } else {
-    alert("✅ Signup successful! Check your email for confirmation.");
-  }
-}
-
-// User Login
-async function login(email, password) {
-  let { data, error } = await supabaseClient.auth.signInWithPassword({
-    email,
-    password
-  });
-
-  if (error) {
-    console.error("Login Error:", error.message);
-    alert("❌ " + error.message);
-  } else {
-    alert("✅ Login successful!");
-  }
-}
-
-
-// ========== Elements ==========
-const emailEl = document.getElementById("email");
-const passwordEl = document.getElementById("password");
-const signupBtn = document.getElementById("signupBtn");
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const authStatus = document.getElementById("authStatus");
-
-const compose = document.getElementById("compose");
-const titleEl = document.getElementById("title");
-const contentEl = document.getElementById("content");
-const addBtn = document.getElementById("addBtn");
-const postsWrap = document.getElementById("postList");
-const myPostsToggle = document.getElementById("myPostsToggle");
-
 let currentUser = null;
 
-// ========== Auth Handlers ==========
-signupBtn.onclick = async () => {
-  const { error } = await supabaseClient.auth.signUp({
-    email: emailEl.value.trim(),
-    password: passwordEl.value.trim()
-  });
+// -------------------
+// Signup
+// -------------------
+document.getElementById("signupBtn").onclick = async () => {
+  const email = document.getElementById("signupEmail").value;
+  const password = document.getElementById("signupPassword").value;
+
+  const { data, error } = await supabaseClient.auth.signUp({ email, password });
   if (error) {
-    alert("Signup error: " + error.message);
+    alert("❌ Signup Error: " + error.message);
   } else {
-    alert("Signed up! Check your email (if confirmations are enabled).");
+    alert("✅ Signup successful! Please check your email.");
   }
 };
 
-loginBtn.onclick = async () => {
-  const { error } = await supabaseClient.auth.signInWithPassword({
-    email: emailEl.value.trim(),
-    password: passwordEl.value.trim()
-  });
-  if (error) alert("Login error: " + error.message);
+// -------------------
+// Login
+// -------------------
+document.getElementById("loginBtn").onclick = async () => {
+  const email = document.getElementById("loginEmail").value;
+  const password = document.getElementById("loginPassword").value;
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) {
+    alert("❌ Login Error: " + error.message);
+  } else {
+    currentUser = data.user;
+    alert("✅ Login successful!");
+    loadPosts();
+  }
 };
 
-logoutBtn.onclick = async () => {
+// -------------------
+// Logout
+// -------------------
+document.getElementById("logoutBtn").onclick = async () => {
   await supabaseClient.auth.signOut();
+  currentUser = null;
+  alert("✅ Logged out!");
+  document.getElementById("posts").innerHTML = "";
 };
 
-supabaseClient.auth.onAuthStateChange(async (_event, session) => {
-  currentUser = session?.user ?? null;
-  updateAuthUI();
-  await loadPosts();
-});
+// -------------------
+// Add Post with Image
+// -------------------
+document.getElementById("addBtn").onclick = async () => {
+  const title = document.getElementById("title").value.trim();
+  const content = document.getElementById("content").value.trim();
+  const file = document.getElementById("imageInput").files[0];
 
-function updateAuthUI() {
-  if (currentUser) {
-    authStatus.textContent = `Logged in as ${currentUser.email}`;
-    compose.classList.remove("hidden");
-  } else {
-    authStatus.textContent = "Not logged in";
-    compose.classList.add("hidden");
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user) {
+    alert("⚠️ Please login first!");
+    return;
   }
-}
 
-// ========== Posts ==========
-addBtn.onclick = async () => {
-  if (!currentUser) { alert("Please login first"); return; }
+  let imageUrl = null;
 
-  const title = titleEl.value.trim();
-  const content = contentEl.value.trim();
-  if (!title || !content) { alert("Please fill all fields"); return; }
+  if (file) {
+    const fileName = `${Date.now()}_${file.name}`;
+    const { data, error: uploadError } = await supabaseClient.storage
+      .from("post-images")
+      .upload(fileName, file);
 
-  const { error } = await supabaseClient.from("posts").insert([
-    { title, content, user_id: currentUser.id }
-  ]);
+    if (uploadError) {
+      alert("❌ Image Upload Error: " + uploadError.message);
+      return;
+    }
+
+    const { data: publicUrlData } = supabaseClient.storage
+      .from("post-images")
+      .getPublicUrl(fileName);
+
+    imageUrl = publicUrlData.publicUrl;
+  }
+
+  const { error } = await supabaseClient
+    .from("posts")
+    .insert([{ title, content, user_id: user.id, image_url: imageUrl }]);
 
   if (error) {
-    alert("Add failed: " + error.message);
+    alert("❌ Add Post Error: " + error.message);
   } else {
-    titleEl.value = "";
-    contentEl.value = "";
-    await loadPosts();
+    alert("✅ Post added!");
+    document.getElementById("title").value = "";
+    document.getElementById("content").value = "";
+    document.getElementById("imageInput").value = "";
+    loadPosts();
   }
 };
 
-// myPostsToggle.onchange = async () => { await loadPosts(); };
-
-async function loadPosts() {
-  // const onlyMine = myPostsToggle.checked && !!currentUser;
-
-  let query = supabaseClient.from("posts").select("*").order("id", { ascending: false });
-  // if (onlyMine && currentUser) query = query.eq("user_id", currentUser.id);
-
-  const { data, error } = await query;
-  if (error) { console.error(error); return; }
-
-  postsWrap.innerHTML = "";
-  (data || []).forEach(renderPost);
-}
-
-function renderPost(post) {
-  const isOwner = currentUser && post.user_id === currentUser.id;
-
-  const card = document.createElement("div");
-  card.className = "post";
-
-  const created = new Date(post.created_at || Date.now()).toLocaleString();
-
-  card.innerHTML = `
-    <h3 class="post-title">${escapeHTML(post.title)}</h3>
-    <p class="post-content">${escapeHTML(post.content || "")}</p>
-    <div class="meta">#${post.id} • ${created}</div>
-    <div class="actions">
-      <button class="btn-like" data-id="${post.id}" data-likes="${post.likes}">👍 Like (${post.likes})</button>
-      <button class="btn-share" data-id="${post.id}">🔗 Share</button>
-      ${isOwner ? `
-        <button class="btn-edit" data-id="${post.id}">✏️ Edit</button>
-        <button class="btn-delete" data-id="${post.id}">🗑 Delete</button>
-      ` : ``}
-    </div>
-  `;
-
-  // attach handlers
-  card.querySelector(".btn-like").onclick = () => likePost(post.id, post.likes);
-  card.querySelector(".btn-share").onclick = () => sharePost(post.id);
-  if (isOwner) {
-    card.querySelector(".btn-edit").onclick = () => editPost(post);
-    card.querySelector(".btn-delete").onclick = () => deletePost(post.id);
-  }
-
-  postsWrap.appendChild(card);
-}
-
-// Secure like: policy only allows +1
-async function likePost(id, currentLikes) {
+// -------------------
+// Like Post
+// -------------------
+async function likePost(postId, currentLikes) {
   const { error } = await supabaseClient
     .from("posts")
     .update({ likes: currentLikes + 1 })
-    .eq("id", id);
+    .eq("id", postId);
 
-  if (error) alert("Like failed: " + error.message);
-  else loadPosts();
+  if (error) {
+    alert("❌ Like Error: " + error.message);
+  } else {
+    loadPosts();
+  }
 }
 
-function sharePost(id) {
-  const url = `${location.origin}/post/${id}`;
-  navigator.clipboard.writeText(url);
-  alert("Copied: " + url);
-}
-
-async function editPost(post) {
-  const title = prompt("Edit title:", post.title);
-  if (title === null) return;
-  const content = prompt("Edit content:", post.content || "");
-  if (content === null) return;
+// -------------------
+// Delete Post
+// -------------------
+async function deletePost(postId) {
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user) {
+    alert("⚠️ Please login first!");
+    return;
+  }
 
   const { error } = await supabaseClient
     .from("posts")
-    .update({ title, content })
-    .eq("id", post.id);
+    .delete()
+    .eq("id", postId)
+    .eq("user_id", user.id);
 
-  if (error) alert("Edit failed: " + error.message);
-  else loadPosts();
+  if (error) {
+    alert("❌ Delete Error: " + error.message);
+  } else {
+    alert("✅ Post deleted!");
+    loadPosts();
+  }
 }
 
-async function deletePost(id) {
-  if (!confirm("Delete this post?")) return;
-  const { error } = await supabaseClient.from("posts").delete().eq("id", id);
-  if (error) alert("Delete failed: " + error.message);
-  else loadPosts();
+// -------------------
+// Edit Post
+// -------------------
+async function editPost(postId, oldTitle, oldContent) {
+  const newTitle = prompt("Enter new title:", oldTitle);
+  const newContent = prompt("Enter new content:", oldContent);
+
+  if (!newTitle || !newContent) return;
+
+  const { error } = await supabaseClient
+    .from("posts")
+    .update({ title: newTitle, content: newContent })
+    .eq("id", postId);
+
+  if (error) {
+    alert("❌ Edit Error: " + error.message);
+  } else {
+    alert("✅ Post updated!");
+    loadPosts();
+  }
 }
 
-// XSS-safe helper
-function escapeHTML(str) {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+// -------------------
+// Share Post
+// -------------------
+function sharePost(postId) {
+  const postUrl = `${window.location.origin}?post=${postId}`;
+  navigator.clipboard.writeText(postUrl).then(() => {
+    alert("✅ Post link copied: " + postUrl);
+  });
 }
 
-// initial load (handles already-logged-in sessions)
-(async () => {
+// -------------------
+// Load Posts
+// -------------------
+async function loadPosts() {
+  const postsDiv = document.getElementById("posts");
+  postsDiv.innerHTML = "Loading...";
+
+  const myPostsToggle = document.getElementById("myPostsToggle");
   const { data: { user } } = await supabaseClient.auth.getUser();
-  currentUser = user ?? null;
-  updateAuthUI();
-  await loadPosts();
-})();
+  currentUser = user;
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const postId = urlParams.get("post");
+
+  let query = supabaseClient.from("posts").select("*").order("created_at", { ascending: false });
+
+  if (postId) {
+    query = query.eq("id", postId);
+  } else if (myPostsToggle && myPostsToggle.checked && currentUser) {
+    query = query.eq("user_id", currentUser.id);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    postsDiv.innerHTML = "❌ Error loading posts: " + error.message;
+    return;
+  }
+
+  postsDiv.innerHTML = "";
+  data.forEach(post => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `
+      <h3>${post.title}</h3>
+      ${post.image_url ? `<img src="${post.image_url}">` : ""}
+      <p>${post.content || ""}</p>
+      <p class="small">Likes: ${post.likes} | ${new Date(post.created_at).toLocaleString()}</p>
+      <div class="btn-group">
+        <button onclick="likePost('${post.id}', ${post.likes})">👍 Like</button>
+        <button onclick="sharePost('${post.id}')">🔗 Share</button>
+        ${currentUser && currentUser.id === post.user_id ? `
+          <button onclick="editPost('${post.id}', '${post.title}', '${post.content || ""}')">✏️ Edit</button>
+          <button onclick="deletePost('${post.id}')">❌ Delete</button>
+        ` : ""}
+      </div>
+    `;
+    postsDiv.appendChild(div);
+  });
+}
+
+document.getElementById("myPostsToggle").onchange = loadPosts;
+
+
